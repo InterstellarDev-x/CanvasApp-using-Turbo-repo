@@ -10,7 +10,7 @@ const authRouter = Router();
 
 
 authRouter.post("/signup", async (req: Request, res: Response) => {
-  const { email, password }: { email: string; password: string } = req.body;
+  const { email, password , firstName , lastName  , avatarUrl }: { email: string; password: string , firstName : string , lastName : string , avatarUrl : string} = req.body;
 
   try {
     //existingUser
@@ -33,10 +33,15 @@ authRouter.post("/signup", async (req: Request, res: Response) => {
       }
       const newUser = await db.user.create({
         data: {
+            firstName, 
+            lastName,
           email: email,
           password: hashPassword,
+          avatar : avatarUrl
         },
       });
+
+      return res.status(200).json({message : "signed up succesfully "})
     });
   } catch (e: any) {
     return res.status(500).json({
@@ -93,7 +98,7 @@ authRouter.post("/signin", async (req: Request, res: Response) => {
 authRouter.post("/chat", middleware,  async (req: Request, res: Response) => {
 
 
-    
+
 })
 
 export default authRouter;

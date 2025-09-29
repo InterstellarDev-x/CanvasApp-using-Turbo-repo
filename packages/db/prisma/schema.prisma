@@ -13,8 +13,11 @@ model User {
   User_id     String @id @default(uuid())
   email  String
   password String
+  firstName  String
+  lastName    String
+  avatar      String
   message  Chat[]
-  room     Room?  @relation(references: [User_id] , fields: [User_id])
+  room       Room[]
 }
 
 
@@ -28,7 +31,9 @@ model Chat {
 
 model Room {
   Room_id  Int  @id @default(autoincrement())
-  User_id    String @unique
-  users  User[] 
+  slug      String @unique
+  adminId    String  
+  createdAt   DateTime @default(now())
+  admin      User  @relation(fields: [adminId] , references: [User_id])
 
 }

@@ -1,5 +1,5 @@
 {
-  "name": "canvasApp",
+  "name": "canvasapp",
   "private": true,
   "scripts": {
     "build": "turbo run build",

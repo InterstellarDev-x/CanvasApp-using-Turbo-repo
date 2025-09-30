@@ -106,56 +106,6 @@ authRouter.post("/signin", async (req: Request, res: Response) => {
 
 });
 
-authRouter.post("/chat", middleware,  async (req: Request, res: Response) => {
 
-   const userId = req.body.user_id as string
-
-   const parseData  = roomSchema.safeParse(req.body)
-   if(!parseData.success){return res.send(403).json({message : "Invalid inputs"})}
-
-
-   try{
-
-
-
-     const room = await db.room.findFirst({
-  where : {
-    slug : parseData.data.name
-  }
-
- })
-
- if(room){
- return res.status(411).json({message : "Room name already exist"})
- }
-
-   const newRoom = await db.room.create({
-  data : {
-    slug : parseData.data.name,
-    adminId : userId
-  }})
-
-
-
-
- return res.status(200).json({
-  message : "success",
-  roomId : newRoom.Room_id
- })
-
-
-   }catch(e){
-    console.log(e)
-
-    return res.status(500).json({
-      "message" : "Internal Server Error"
-    })
-
-   }
-
-
- 
-
-})
 
 export default authRouter;

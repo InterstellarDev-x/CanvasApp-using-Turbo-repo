@@ -92,6 +92,7 @@ wss.on("connection",  function connection(socket, request) {
             data : {
                 message : message,
                 ownerId : decodeToken.userId,
+                roomId :  Number(roomId)
 
             }
         })

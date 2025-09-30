@@ -23,9 +23,13 @@ model User {
 
 model Chat {
   Chat_id   Int @id @default(autoincrement())
+  roomId   Int  
   ownerId   String
   message   String
-  user      User  @relation(fields: [ownerId]  , references: [User_id])
+  user      User  @relation(fields: [ownerId]  , references: [User_id] )
+  room     Room @relation(fields: [roomId]  , references: [Room_id] )
+
+
 
 }
 
@@ -35,5 +39,7 @@ model Room {
   adminId    String  
   createdAt   DateTime @default(now())
   admin      User  @relation(fields: [adminId] , references: [User_id])
+  chat       Chat[] 
+
 
 }

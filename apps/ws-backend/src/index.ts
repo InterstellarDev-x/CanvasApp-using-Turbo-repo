@@ -3,6 +3,9 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 import { JWT_SECRET } from "@repo/backend-config/secret";
 import { db } from "@repo/db/client"
 
+
+// we have to make stateless backed to track the user rooms 
+// we can also use redux or singletion here for state management 
 const wss = new WebSocketServer({ port: 8080 });
 if (wss) {
   console.log("server is running on port 8080");
@@ -16,13 +19,14 @@ if (wss) {
 
 interface  RoomsInterface {
   
-     socket : WebSocket,
-     roomId : string
+     userId : string
+     rooms: string[],
+     socket : WebSocket
 }
 
 
 
-const allSockets : RoomsInterface[] = []
+const users : RoomsInterface[] = []
 
 
 wss.on("connection",  function connection(socket, request) {
@@ -50,36 +54,68 @@ wss.on("connection",  function connection(socket, request) {
       socket.close();
       return;
     }
-  
 
-
+    users.push({
+      userId : decodeToken.userID,
+      socket : socket,
+      rooms : []
+    })
 
 
  
   socket.on("message", async (data) => {
     const MessageObject = JSON.parse(data as unknown as string);
 
-    if (MessageObject.type === "join") {
-        allSockets.push({socket : socket , roomId : MessageObject.payload.roomId})
+    if (MessageObject.type === "join") { 
+  
+       const user = users.find(x => x.socket === socket)
+       user?.rooms.push(MessageObject.payload.roomId)
+
     }
 
+
+   if(MessageObject.type === "leave"){
+     let user = users.find(x=> x.socket === socket)
+     if(!user){
+      return null
+     }
+     user.rooms = user.rooms.filter(s => s !== MessageObject.payload.roomId)
+   }
+
     if(MessageObject.type === "chat"){
-        const message = MessageObject.payload.message
+        const message = MessageObject.payload.message as string
+        const roomId  = MessageObject.payload.roomId as string
+
+        // we should use queue here 
 
         await db.chat.create({
             data : {
                 message : message,
-                ownerId : decodeToken.userId
+                ownerId : decodeToken.userId,
+
             }
         })
 
 
 
-        allSockets.filter(s=> (
-            s.socket !== socket
-        )).map(s => (
-            s.socket.send(message)
-        ))
+       //logic for sending the message 
+   
+      users.forEach((s)=> {
+      
+       if( s.rooms.includes(roomId)){
+        s.socket.send(JSON.stringify({
+          type : "message",
+          message,
+          roomId
+
+        }))
+       }
+
+        
+    })
+       
+
+
     }
 
     console.log(MessageObject);

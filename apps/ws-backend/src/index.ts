@@ -1,55 +1,96 @@
-import { WebSocketServer } from "ws";
-import jwt, { JwtPayload } from "jsonwebtoken"
-import  { JWT_SECRET }  from "@repo/backend-config/secret"
+import WebSocket, { WebSocketServer } from "ws";
+import jwt, { JwtPayload } from "jsonwebtoken";
+import { JWT_SECRET } from "@repo/backend-config/secret";
+import { db } from "@repo/db/client"
 
-const wss = new WebSocketServer({port : 8080})
-if(wss){
-    console.log("message is running on port 8080")
+const wss = new WebSocketServer({ port: 8080 });
+if (wss) {
+  console.log("server is running on port 8080");
 }
 
-wss.on('connection' , function connection(ws , request){
+// type usersockets = typeof WebSocket;
+
+// interface RoomsInterface {
+//   [key: string]: usersockets[];
+// }
+
+interface  RoomsInterface {
+  
+     socket : WebSocket,
+     roomId : string
+}
+
+
+
+const allSockets : RoomsInterface[] = []
+
+
+wss.on("connection",  function connection(socket, request) {
+  const url = request.url;
+  if (!url) {
+    return;
+  }
+
+  const queryParams = new URLSearchParams(url.split("?")[1]);
+  const token = queryParams.get("token");
+  if (!token) {
+    socket.close();
+    return;
+  }
+
+  try {
+    const decodeToken = jwt.verify(token, JWT_SECRET) as JwtPayload;
+
+    if (typeof decodeToken === "string") {
+      socket.close();
+      return;
+    }
+
+    if (!decodeToken.userId || !decodeToken) {
+      socket.close();
+      return;
+    }
+  
+
+
+
+
  
-    const url = request.url
-    if(!url){
-        return 
+  socket.on("message", async (data) => {
+    const MessageObject = JSON.parse(data as unknown as string);
+
+    if (MessageObject.type === "join") {
+        allSockets.push({socket : socket , roomId : MessageObject.payload.roomId})
     }
 
-    const queryParams = new URLSearchParams(url.split("?")[1])
-    const token = queryParams.get('token') 
-    if(!token){
-        ws.close()
-        return
+    if(MessageObject.type === "chat"){
+        const message = MessageObject.payload.message
+
+        await db.chat.create({
+            data : {
+                message : message,
+                ownerId : decodeToken.userId
+            }
+        })
+
+
+
+        allSockets.filter(s=> (
+            s.socket !== socket
+        )).map(s => (
+            s.socket.send(message)
+        ))
     }
-     
-    try {
-         const decodeToken  = jwt.verify(token, JWT_SECRET) as JwtPayload
 
-    if(typeof decodeToken === "string"){
-        ws.close()
-        return;
-    }
+    console.log(MessageObject);
 
-    if(!decodeToken.userId || !decodeToken){
-        ws.close()
-        return;
-    }
-    }catch(e){
-       console.log("not a valid user")
-       ws.close()
-       return;
-    }
-   
+  });
 
-    
+  socket.send("connected");
 
-
-
-  console.log("hello")
-
-
-    ws.on('message' , (data)=> {
-        console.log('received: %s', data);
-    })
-
-    ws.send("connected")
-})
+  } catch (e) {
+    console.log("not a valid user");
+    socket.close();
+    return;
+  }
+});

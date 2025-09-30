@@ -1,10 +1,12 @@
 import { Request, Response, Router } from "express";
 import { db } from "@repo/db/client";
 import bcrypt from "bcrypt";
-import jwt from  "jsonwebtoken"
+import jwt, { sign } from  "jsonwebtoken"
 import { JWT_SECRET } from "../config.js";
 import { middleware } from "../middleware/auth.js";
 const authRouter = Router();
+import { signupSchema  , signinSchema , roomSchema} from "@repo/backend-config/types"
+
 
 
 
@@ -12,11 +14,20 @@ const authRouter = Router();
 authRouter.post("/signup", async (req: Request, res: Response) => {
   const { email, password , firstName , lastName  , avatarUrl }: { email: string; password: string , firstName : string , lastName : string , avatarUrl : string} = req.body;
 
+   const parseData = signupSchema.safeParse(req.body)
+
+   if(!parseData.success){
+    return res.status(403).json({
+      message  : "Invalid inputs"
+    })
+   }
+
+
   try {
     //existingUser
     const existingUser = await db.user.findFirst({
       where: {
-        email: email,
+        email: parseData.data.email,
       },
     });
 
@@ -97,7 +108,53 @@ authRouter.post("/signin", async (req: Request, res: Response) => {
 
 authRouter.post("/chat", middleware,  async (req: Request, res: Response) => {
 
+   const userId = req.body.user_id as string
 
+   const parseData  = roomSchema.safeParse(req.body)
+   if(!parseData.success){return res.send(403).json({message : "Invalid inputs"})}
+
+
+   try{
+
+
+
+     const room = await db.room.findFirst({
+  where : {
+    slug : parseData.data.name
+  }
+
+ })
+
+ if(room){
+ return res.status(411).json({message : "Room name already exist"})
+ }
+
+   const newRoom = await db.room.create({
+  data : {
+    slug : parseData.data.name,
+    adminId : userId
+  }})
+
+
+
+
+ return res.status(200).json({
+  message : "success",
+  roomId : newRoom.Room_id
+ })
+
+
+   }catch(e){
+    console.log(e)
+
+    return res.status(500).json({
+      "message" : "Internal Server Error"
+    })
+
+   }
+
+
+ 
 
 })
 
